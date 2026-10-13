@@ -13,6 +13,7 @@ macOS screenshot and screen-recording app (Swift/AppKit + SwiftUI settings), bui
 - Dev build: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build`. SwiftUI macros need the full Xcode toolchain, not Command Line Tools.
 - Capture and recording need Screen Recording permission. Ad-hoc rebuilds may need it granted again.
 - Recording encodes with an installed ffmpeg (auto-detected; Settings ▸ Video has a one-click install).
+- App icon: `swift scripts/make-icon.swift` regenerates `Resources/AppIcon.icns`/`.png` (viewfinder corners + the "." dot of skrin.sut).
 
 ## Layout
 - `Sources/Skrinsut/Capture`: ScreenCaptureKit capture, the area/window selector, OCR.

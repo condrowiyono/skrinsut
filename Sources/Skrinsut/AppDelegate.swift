@@ -31,9 +31,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: Status item
 
+    /// Menu-bar glyph matching the app icon: viewfinder corners framing the "." dot (template, so it adapts to light/dark).
+    static let menuBarIcon: NSImage = {
+        let image = NSImage(size: CGSize(width: 18, height: 18), flipped: false) { rect in
+            let frame = rect.insetBy(dx: 2, dy: 2)
+            let arm: CGFloat = 4.2, r: CGFloat = 1.8
+            let path = NSBezierPath()
+            func corner(_ p: CGPoint, _ dx: CGFloat, _ dy: CGFloat) {
+                path.move(to: CGPoint(x: p.x, y: p.y + dy * arm))
+                path.line(to: CGPoint(x: p.x, y: p.y + dy * r))
+                path.curve(to: CGPoint(x: p.x + dx * r, y: p.y), controlPoint1: p, controlPoint2: p)
+                path.line(to: CGPoint(x: p.x + dx * arm, y: p.y))
+            }
+            corner(CGPoint(x: frame.minX, y: frame.maxY), 1, -1)
+            corner(CGPoint(x: frame.maxX, y: frame.maxY), -1, -1)
+            corner(CGPoint(x: frame.minX, y: frame.minY), 1, 1)
+            corner(CGPoint(x: frame.maxX, y: frame.minY), -1, 1)
+            path.lineWidth = 1.7
+            path.lineCapStyle = .round
+            NSColor.black.setStroke()
+            path.stroke()
+            NSColor.black.setFill()
+            NSBezierPath(ovalIn: CGRect(x: rect.midX - 2.6, y: rect.midY - 2.6, width: 5.2, height: 5.2)).fill()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Skrinsut"
+        return image
+    }()
+
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "Skrinsut")
+        item.button?.image = AppDelegate.menuBarIcon
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -110,7 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.action = nil
         default:
             item.length = NSStatusItem.squareLength
-            button.image = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "Skrinsut")
+            button.image = AppDelegate.menuBarIcon
             button.title = ""
             button.contentTintColor = nil
             button.action = nil

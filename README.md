@@ -1,3 +1,5 @@
+<img src="Resources/AppIcon.png" width="128" alt="Skrinsut icon">
+
 # Skrinsut
 
 **skrin.sut**: “screen.shot”, the way it sounds in Indonesian.

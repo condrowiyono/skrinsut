@@ -17,6 +17,9 @@ APP=build/Skrinsut.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Skrinsut"
+# App icon (regenerate with: swift scripts/make-icon.swift)
+[[ -f Resources/AppIcon.icns ]] || swift scripts/make-icon.swift
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 VERSION="${VERSION:-0.1.0}"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -28,6 +31,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>Skrinsut</string>
   <key>CFBundleDisplayName</key><string>Skrinsut</string>
   <key>CFBundleExecutable</key><string>Skrinsut</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>1</string>
