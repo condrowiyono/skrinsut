@@ -72,10 +72,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard menu === statusItem?.menu else { return }
         menu.removeAllItems()
-        func add(_ title: String, _ action: Selector, hotkey: HotKeyAction? = nil) {
-            var t = title
-            if let hotkey, let combo = HotKeyManager.shared.combo(for: hotkey) { t += "\t\(combo.display)" }
-            let i = menu.addItem(withTitle: t, action: action, keyEquivalent: "")
+        // Shortcuts go in the item's key equivalent so macOS draws them right-aligned, like system menus.
+        func add(_ title: String, _ action: Selector, hotkey: HotKeyAction? = nil,
+                 key: String = "", modifiers: NSEvent.ModifierFlags = .command) {
+            let i = menu.addItem(withTitle: title, action: action, keyEquivalent: key)
+            i.keyEquivalentModifierMask = modifiers
+            if let hotkey, let combo = HotKeyManager.shared.combo(for: hotkey), let k = combo.menuKeyEquivalent {
+                i.keyEquivalent = k
+                i.keyEquivalentModifierMask = combo.menuModifierMask
+            }
             i.target = self
         }
         add("Fullscreen Screenshot", #selector(grabFullscreen), hotkey: .fullscreen)
@@ -93,8 +98,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         add("Open File…", #selector(openFile))
         add("Open From Clipboard", #selector(openFromClipboard))
         menu.addItem(.separator())
-        add("Settings…", #selector(showPreferences))
-        add("Quit Skrinsut", #selector(quit))
+        add("Settings…", #selector(showPreferences), key: ",")
+        add("Quit Skrinsut", #selector(quit), key: "q")
     }
 
     // MARK: Actions

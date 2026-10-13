@@ -35,6 +35,21 @@ struct KeyCombo: Codable, Equatable {
     var modifiers: UInt32   // Carbon modifier mask
     var display: String
 
+    /// Menu key equivalent (lowercase key) for showing the shortcut in a menu's right-aligned column.
+    var menuKeyEquivalent: String? {
+        let key = String(display.drop { "⌃⌥⇧⌘".contains($0) }).lowercased()
+        return key.count == 1 ? key : nil
+    }
+
+    var menuModifierMask: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if modifiers & UInt32(cmdKey) != 0 { flags.insert(.command) }
+        if modifiers & UInt32(shiftKey) != 0 { flags.insert(.shift) }
+        if modifiers & UInt32(optionKey) != 0 { flags.insert(.option) }
+        if modifiers & UInt32(controlKey) != 0 { flags.insert(.control) }
+        return flags
+    }
+
     init(keyCode: UInt32, modifiers: UInt32, display: String) {
         self.keyCode = keyCode
         self.modifiers = modifiers
