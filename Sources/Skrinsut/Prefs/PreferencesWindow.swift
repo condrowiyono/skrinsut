@@ -160,6 +160,7 @@ private struct SettingsIcon: View {
 
 private struct GeneralPane: View {
     @AppStorage(SettingKey.defaultFolder) private var folder = ""
+    @AppStorage(SettingKey.allowDeeplinks) private var allowDeeplinks = false
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -194,6 +195,33 @@ private struct GeneralPane: View {
                             launchAtLogin = SMAppService.mainApp.status == .enabled
                         }
                     }
+            }
+
+            Section {
+                Toggle("Allow deep links (skrinsut://)", isOn: $allowDeeplinks)
+                if allowDeeplinks {
+                    ForEach(AppDelegate.deepLinkRoutes, id: \.route) { link in
+                        LabeledContent(link.title) {
+                            HStack(spacing: 6) {
+                                Text("skrinsut://\(link.route)")
+                                    .font(.callout.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                                Button {
+                                    Exporter.copyText("skrinsut://\(link.route)")
+                                    Toast.show("Copied link", detail: "skrinsut://\(link.route)")
+                                } label: { Image(systemName: "doc.on.doc") }
+                                .buttonStyle(.borderless)
+                                .help("Copy link")
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Deep Links")
+            } footer: {
+                Text("Lets other apps, scripts and launchers (Shortcuts, Raycast, Alfred, Terminal `open skrinsut://grab/area`) trigger captures. Off by default, so websites and apps can't take screenshots without you turning this on.")
+                    .foregroundStyle(.secondary)
             }
         }
         .onAppear { if folder.isEmpty { folder = Settings.saveFolder.path } }

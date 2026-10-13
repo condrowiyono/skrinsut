@@ -323,11 +323,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    /// skrinsut://grab/fullscreen | grab/area | grab/window | grab/repeat | ocr | load/clipboard
+    /// Supported routes, shown in Settings ▸ General ▸ Deep Links.
+    static let deepLinkRoutes: [(route: String, title: String)] = [
+        ("grab/fullscreen", "Fullscreen screenshot"),
+        ("grab/area", "Area screenshot"),
+        ("grab/window", "Window screenshot"),
+        ("grab/repeat", "Repeat area screenshot"),
+        ("ocr", "Recognize text / QR"),
+        ("record/area", "Record area"),
+        ("record/window", "Record window"),
+        ("record/fullscreen", "Record fullscreen"),
+        ("record/stop", "Stop recording"),
+        ("load/clipboard", "Open image from clipboard"),
+    ]
+
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "skrinsut" else { return }
         guard Settings.allowDeeplinks else {
-            Toast.show("Deep links are disabled", detail: "An app tried to open \(url.absoluteString). Enable deep links in Settings → Advanced.")
+            Toast.show("Deep links are off", detail: "Something tried to open \(url.absoluteString). Turn on deep links in Settings ▸ General ▸ Deep Links.")
             return
         }
         let route = ([url.host].compactMap { $0 } + url.pathComponents.filter { $0 != "/" }).joined(separator: "/")
@@ -337,6 +350,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "grab/window": grabWindow()
         case "grab/repeat": grabRepeat()
         case "ocr": grabOCR()
+        case "record/area": recordArea()
+        case "record/window": recordWindow()
+        case "record/fullscreen": recordFullscreen()
+        case "record/stop": stopRecording()
         case "load/clipboard": openFromClipboard()
         default: Toast.show("Unknown deep link", detail: url.absoluteString)
         }

@@ -35,7 +35,7 @@ Ad-hoc signatures change on every rebuild, so macOS may ask again. Set `SIGN_IDE
 | Pin | Floating always-on-top image: drag to move, scroll to resize, double-click to edit, right-click for 50/100/200%, semi-transparent, copy, close; esc closes |
 | Hotkeys | Global (Carbon), recordable in Settings ▸ Shortcuts. Defaults: ⇧⌘1 fullscreen, ⇧⌘2 area, ⇧⌘7 window, ⇧⌘8 OCR, ⇧⌘9 repeat |
 | Settings | System Settings–style window with a sidebar: **General** (save location, launch at login), **Image** (after-screenshot Show/Copy/Save, save format, Retina downscale, window background, snapping), **Video** (format, max resolution, frame rate, cursor, codec H.264/HEVC, software/hardware encoder, constant quality or target bitrate, speed, GIF frame rate/colors/dithering, ffmpeg status with one-click install) **Shortcuts** (recordable global hotkeys plus editor key reference), then **About** (version, macOS and ffmpeg versions, credits) and **Help** (getting started with your current hotkeys, Screen Recording permission status, troubleshooting FAQ) |
-| Deep links | `skrinsut://grab/fullscreen`, `grab/area`, `grab/window`, `grab/repeat`, `ocr`, `load/clipboard` (off by default; there's no switch in Settings) |
+| Deep links | `skrinsut://grab/fullscreen`, `grab/area`, `grab/window`, `grab/repeat`, `ocr`, `record/area`, `record/window`, `record/fullscreen`, `record/stop`, `load/clipboard`. Off by default; turn on in Settings ▸ General ▸ Deep Links (each link has a copy button). Try: `open skrinsut://grab/area` |
 | Files | Open file, open from clipboard, "Open With" for png/jpeg/gif |
 
 Roadmap: scrolling capture with stitching, cloud/S3 upload, a screenshot library,
