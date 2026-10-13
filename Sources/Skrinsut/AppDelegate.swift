@@ -323,7 +323,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    /// Supported routes, shown in Settings ▸ General ▸ Deep Links.
+    /// Supported routes, shown in Settings ▸ Deep Links.
     static let deepLinkRoutes: [(route: String, title: String)] = [
         ("grab/fullscreen", "Fullscreen screenshot"),
         ("grab/area", "Area screenshot"),
@@ -340,7 +340,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "skrinsut" else { return }
         guard Settings.allowDeeplinks else {
-            Toast.show("Deep links are off", detail: "Something tried to open \(url.absoluteString). Turn on deep links in Settings ▸ General ▸ Deep Links.")
+            Toast.show("Deep links are off", detail: "Something tried to open \(url.absoluteString). Turn them on in Settings ▸ Deep Links.")
             return
         }
         let route = ([url.host].compactMap { $0 } + url.pathComponents.filter { $0 != "/" }).joined(separator: "/")

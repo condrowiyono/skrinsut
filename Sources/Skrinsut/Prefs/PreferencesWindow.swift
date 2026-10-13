@@ -32,10 +32,10 @@ final class PreferencesWindowController: NSWindowController {
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, image, video, shortcuts, about, help
+    case general, image, video, shortcuts, deepLinks, about, help
     var id: String { rawValue }
     /// Settings proper, then (after a divider) About and Help.
-    static let main: [SettingsPane] = [.general, .image, .video, .shortcuts]
+    static let main: [SettingsPane] = [.general, .image, .video, .shortcuts, .deepLinks]
     static let info: [SettingsPane] = [.about, .help]
     var title: String {
         switch self {
@@ -43,6 +43,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .image: "Image"
         case .video: "Video"
         case .shortcuts: "Shortcuts"
+        case .deepLinks: "Deep Links"
         case .about: "About"
         case .help: "Help"
         }
@@ -53,6 +54,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .image: "photo.fill"
         case .video: "video.fill"
         case .shortcuts: "command"
+        case .deepLinks: "link"
         case .about: "info"
         case .help: "questionmark"
         }
@@ -63,6 +65,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .image: .blue
         case .video: .red
         case .shortcuts: .indigo
+        case .deepLinks: .orange
         case .about: .teal
         case .help: .green
         }
@@ -95,6 +98,7 @@ struct PreferencesView: View {
                     case .image: ImagePane()
                     case .video: VideoPane()
                     case .shortcuts: ShortcutsPane()
+                    case .deepLinks: DeepLinksPane()
                     case .about: AboutPane()
                     case .help: HelpPane()
                     }
@@ -160,7 +164,6 @@ private struct SettingsIcon: View {
 
 private struct GeneralPane: View {
     @AppStorage(SettingKey.defaultFolder) private var folder = ""
-    @AppStorage(SettingKey.allowDeeplinks) private var allowDeeplinks = false
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -197,32 +200,6 @@ private struct GeneralPane: View {
                     }
             }
 
-            Section {
-                Toggle("Allow deep links (skrinsut://)", isOn: $allowDeeplinks)
-                if allowDeeplinks {
-                    ForEach(AppDelegate.deepLinkRoutes, id: \.route) { link in
-                        LabeledContent(link.title) {
-                            HStack(spacing: 6) {
-                                Text("skrinsut://\(link.route)")
-                                    .font(.callout.monospaced())
-                                    .foregroundStyle(.secondary)
-                                    .textSelection(.enabled)
-                                Button {
-                                    Exporter.copyText("skrinsut://\(link.route)")
-                                    Toast.show("Copied link", detail: "skrinsut://\(link.route)")
-                                } label: { Image(systemName: "doc.on.doc") }
-                                .buttonStyle(.borderless)
-                                .help("Copy link")
-                            }
-                        }
-                    }
-                }
-            } header: {
-                Text("Deep Links")
-            } footer: {
-                Text("Lets other apps, scripts and launchers (Shortcuts, Raycast, Alfred, Terminal `open skrinsut://grab/area`) trigger captures. Off by default, so websites and apps can't take screenshots without you turning this on.")
-                    .foregroundStyle(.secondary)
-            }
         }
         .onAppear { if folder.isEmpty { folder = Settings.saveFolder.path } }
     }
@@ -489,6 +466,41 @@ private struct FFmpegSection: View {
         if panel.runModal() == .OK, let url = panel.url {
             ffmpegOverride = url.path
             refresh()
+        }
+    }
+}
+
+// MARK: - Deep Links
+
+private struct DeepLinksPane: View {
+    @AppStorage(SettingKey.allowDeeplinks) private var allowDeeplinks = false
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Allow deep links (skrinsut://)", isOn: $allowDeeplinks)
+                if allowDeeplinks {
+                    ForEach(AppDelegate.deepLinkRoutes, id: \.route) { link in
+                        LabeledContent(link.title) {
+                            HStack(spacing: 6) {
+                                Text("skrinsut://\(link.route)")
+                                    .font(.callout.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                                Button {
+                                    Exporter.copyText("skrinsut://\(link.route)")
+                                    Toast.show("Copied link", detail: "skrinsut://\(link.route)")
+                                } label: { Image(systemName: "doc.on.doc") }
+                                .buttonStyle(.borderless)
+                                .help("Copy link")
+                            }
+                        }
+                    }
+                }
+            } footer: {
+                Text("Lets other apps, scripts and launchers (Shortcuts, Raycast, Alfred, Terminal `open skrinsut://grab/area`) trigger captures. Off by default, so websites and apps can't take screenshots without you turning this on.")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
