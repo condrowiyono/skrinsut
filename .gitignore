@@ -1,0 +1,11 @@
+# SwiftPM / build output
+.build/
+build/
+.swiftpm/
+*.xcodeproj/xcuserdata/
+
+# macOS
+.DS_Store
+
+# Local Claude Code settings and installed skills
+.claude/
