@@ -8,12 +8,13 @@ final class PreferencesWindowController: NSWindowController {
 
     private init() {
         let host = NSHostingController(rootView: PreferencesView())
-        host.sizingOptions = [] // the window sets the size; the view fills it (incl. under the transparent title bar)
+        host.sizingOptions = [] // the window sets the size; NavigationSplitView fills it
         let window = NSWindow(contentViewController: host)
-        window.title = "Skrinsut Settings"
+        // Sidebar material runs full height, behind the traffic lights; SwiftUI insets the
+        // sidebar list and gives the detail pane a scroll-edge blur under the title bar.
         window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
+        window.title = "" // no title; an unset title would read "Untitled" in the Window menu
         window.setContentSize(CGSize(width: 720, height: 560))
         window.isReleasedWhenClosed = false
         super.init(window: window)
@@ -83,66 +84,31 @@ struct PreferencesView: View {
     private var pane: SettingsPane { nav.pane ?? .general }
 
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
-            Divider()
-            VStack(alignment: .leading, spacing: 0) {
-                Text(pane.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(height: 28)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                Group {
-                    switch pane {
-                    case .general: GeneralPane()
-                    case .image: ImagePane()
-                    case .video: VideoPane()
-                    case .shortcuts: ShortcutsPane()
-                    case .deepLinks: DeepLinksPane()
-                    case .about: AboutPane()
-                    case .help: HelpPane()
-                    }
+        NavigationSplitView {
+            List(selection: $nav.pane) {
+                Section { ForEach(SettingsPane.main, content: row) }
+                Section { ForEach(SettingsPane.info, content: row) }
+            }
+            .navigationSplitViewColumnWidth(215)
+        } detail: {
+            Group {
+                switch pane {
+                case .general: GeneralPane()
+                case .image: ImagePane()
+                case .video: VideoPane()
+                case .shortcuts: ShortcutsPane()
+                case .deepLinks: DeepLinksPane()
+                case .about: AboutPane()
+                case .help: HelpPane()
                 }
-                .formStyle(.grouped)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .formStyle(.grouped)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .ignoresSafeArea()
     }
 
-    /// Solid sidebar (no glass) with System Settings–style rows.
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            ForEach(SettingsPane.main) { p in sidebarRow(p) }
-            Divider().padding(.vertical, 8).padding(.horizontal, 6)
-            ForEach(SettingsPane.info) { p in sidebarRow(p) }
-            Spacer()
-        }
-        .padding(.horizontal, 10)
-        .padding(.top, 52) // clear the traffic lights
-        .frame(width: 200)
-        .frame(maxHeight: .infinity)
-        .background(Color(nsColor: .underPageBackgroundColor))
-    }
-
-    private func sidebarRow(_ p: SettingsPane) -> some View {
-        Button {
-            nav.pane = p
-        } label: {
-            HStack(spacing: 8) {
-                SettingsIcon(symbol: p.symbol, tint: p.tint)
-                Text(p.title)
-                    .foregroundStyle(p == pane ? Color.white : Color.primary)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(p == pane ? Color.accentColor : Color.clear))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+    private func row(_ p: SettingsPane) -> some View {
+        Label { Text(p.title) } icon: { SettingsIcon(symbol: p.symbol, tint: p.tint) }
+            .tag(p)
     }
 }
 
