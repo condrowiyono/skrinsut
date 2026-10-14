@@ -95,7 +95,7 @@ final class KeyableWindow: NSWindow {
 
 private final class SelectorView: NSView {
     private let snapshot: DisplaySnapshot
-    private unowned let selector: RegionSelector
+    private weak var selector: RegionSelector?
     private lazy var sampler = PixelSampler(snapshot.image)
     private var mouse: CGPoint?
     private var dragStart: CGPoint?
@@ -108,6 +108,9 @@ private final class SelectorView: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Reads fall back once the selector is gone; the overlay is on its way out anyway.
+    private var mode: RegionSelector.Mode { selector?.mode ?? .area }
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
@@ -146,7 +149,7 @@ private final class SelectorView: NSView {
             window?.makeKey()
             window?.makeFirstResponder(self)
         }
-        selector.refreshAll()
+        selector?.refreshAll()
     }
 
     override func mouseExited(with event: NSEvent) {
@@ -157,7 +160,7 @@ private final class SelectorView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         mouse = p
-        if selector.mode == .area {
+        if mode == .area {
             dragStart = p
             selection = nil
         }
@@ -167,7 +170,7 @@ private final class SelectorView: NSView {
     override func mouseDragged(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         mouse = p
-        guard selector.mode == .area, let start = dragStart else { return }
+        guard mode == .area, let start = dragStart else { return }
         var rect = CGRect(x: min(start.x, p.x), y: min(start.y, p.y), width: abs(p.x - start.x), height: abs(p.y - start.y))
         if event.modifierFlags.contains(.shift) {
             let side = max(rect.width, rect.height)
@@ -181,34 +184,34 @@ private final class SelectorView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        switch selector.mode {
+        switch mode {
         case .window:
-            if let w = selector.window(atGlobal: globalPoint(fromLocal: p)) {
-                selector.finish(.window(w.windowID))
+            if let w = selector?.window(atGlobal: globalPoint(fromLocal: p)) {
+                selector?.finish(.window(w.windowID))
             }
         case .area:
             defer { dragStart = nil }
             // A plain click (no drag) captures the window under the cursor.
             guard let sel = selection, sel.width >= 3, sel.height >= 3 else {
-                if let w = selector.window(atGlobal: globalPoint(fromLocal: p)) {
-                    selector.finish(.window(w.windowID))
+                if let w = selector?.window(atGlobal: globalPoint(fromLocal: p)) {
+                    selector?.finish(.window(w.windowID))
                 }
                 return
             }
             let snapRect = pixelAligned(sel)
             let shot = Screenshot(image: snapshot.image, scale: snapshot.scale)
             if let cropped = ImageUtil.crop(shot, toPointRect: snapRect) {
-                selector.finish(.area(cropped, globalRect: globalRect(fromLocal: snapRect), displayID: snapshot.screen.displayID))
+                selector?.finish(.area(cropped, globalRect: globalRect(fromLocal: snapRect), displayID: snapshot.screen.displayID))
             } else {
-                selector.finish(.cancelled)
+                selector?.finish(.cancelled)
             }
         }
     }
 
     override func keyDown(with event: NSEvent) {
         switch Int(event.keyCode) {
-        case 53: selector.finish(.cancelled)                                // Esc
-        case 49: selector.mode = selector.mode == .area ? .window : .area   // Space
+        case 53: selector?.finish(.cancelled)                                // Esc
+        case 49: selector?.mode = mode == .area ? .window : .area   // Space
         default: super.keyDown(with: event)
         }
     }
@@ -224,10 +227,10 @@ private final class SelectorView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         let dim = NSColor.black.withAlphaComponent(0.35)
         var highlight: CGRect?
-        switch selector.mode {
+        switch mode {
         case .area: highlight = selection
         case .window:
-            if let m = mouse, let w = selector.window(atGlobal: globalPoint(fromLocal: m)) {
+            if let m = mouse, let w = selector?.window(atGlobal: globalPoint(fromLocal: m)) {
                 highlight = localRect(fromGlobal: w.frame)
             }
         }
@@ -241,7 +244,7 @@ private final class SelectorView: NSView {
         path.fill()
 
         if let h = highlight {
-            if selector.mode == .window {
+            if mode == .window {
                 NSColor.systemBlue.withAlphaComponent(0.18).setFill()
                 NSBezierPath(rect: h).fill()
             }
@@ -252,7 +255,7 @@ private final class SelectorView: NSView {
             drawSizeLabel(for: h)
         }
 
-        if let m = mouse, selector.mode == .area {
+        if let m = mouse, mode == .area {
             drawCrosshair(at: m)
             drawLoupe(at: m)
         }
@@ -325,7 +328,7 @@ private final class SelectorView: NSView {
     }
 
     private func drawHint() {
-        let text = selector.mode == .area ? "Drag to select · Click a window · Space: window mode · Esc: cancel"
+        let text = mode == .area ? "Drag to select · Click a window · Space: window mode · Esc: cancel"
                                           : "Click a window · Space: area mode · Esc: cancel"
         let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.white]
         let size = (text as NSString).size(withAttributes: attrs)
