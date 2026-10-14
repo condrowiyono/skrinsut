@@ -37,6 +37,7 @@ final class RegionSelector {
         for snap in snapshots {
             let win = KeyableWindow(contentRect: snap.screen.frame, styleMask: .borderless, backing: .buffered, defer: false)
             win.level = .screenSaver
+            win.animationBehavior = .none // the frozen overlay must snap in, not fade like a window
             win.isOpaque = true
             win.hasShadow = false
             win.acceptsMouseMovedEvents = true
