@@ -33,15 +33,16 @@ final class PreferencesWindowController: NSWindowController {
 }
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, image, video, shortcuts, deepLinks, about, help
+    case general, image, toolbar, video, shortcuts, deepLinks, about, help
     var id: String { rawValue }
     /// Settings proper, then (after a divider) About and Help.
-    static let main: [SettingsPane] = [.general, .image, .video, .shortcuts, .deepLinks]
+    static let main: [SettingsPane] = [.general, .image, .toolbar, .video, .shortcuts, .deepLinks]
     static let info: [SettingsPane] = [.about, .help]
     var title: String {
         switch self {
         case .general: "General"
         case .image: "Image"
+        case .toolbar: "Toolbar"
         case .video: "Video"
         case .shortcuts: "Shortcuts"
         case .deepLinks: "Deep Links"
@@ -53,6 +54,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape.fill"
         case .image: "photo.fill"
+        case .toolbar: "menubar.rectangle"
         case .video: "video.fill"
         case .shortcuts: "command"
         case .deepLinks: "link"
@@ -64,6 +66,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .gray
         case .image: .blue
+        case .toolbar: .purple
         case .video: .red
         case .shortcuts: .indigo
         case .deepLinks: .orange
@@ -95,6 +98,7 @@ struct PreferencesView: View {
                 switch pane {
                 case .general: GeneralPane()
                 case .image: ImagePane()
+                case .toolbar: ToolbarPane()
                 case .video: VideoPane()
                 case .shortcuts: ShortcutsPane()
                 case .deepLinks: DeepLinksPane()
@@ -218,6 +222,59 @@ private struct ImagePane: View {
             Section("Editor") {
                 Toggle("Snap to objects and edges", isOn: $snapping)
             }
+        }
+    }
+}
+
+// MARK: - Toolbar
+
+private struct ToolbarPane: View {
+    @State private var order = Self.loadOrder()
+    @State private var hidden = ToolbarConfig.hidden
+
+    private static func loadOrder() -> [ToolbarGroup: [String]] {
+        Dictionary(uniqueKeysWithValues: ToolbarGroup.allCases.map { ($0, ToolbarConfig.order($0)) })
+    }
+
+    var body: some View {
+        List {
+            ForEach(ToolbarGroup.allCases) { group in
+                Section(group.title) {
+                    ForEach(order[group] ?? [], id: \.self) { id in
+                        HStack(spacing: 10) {
+                            Image(systemName: "line.3.horizontal").foregroundStyle(.tertiary)
+                            Toggle(isOn: visibleBinding(id)) {
+                                Label(ToolbarGroup.title(id), systemImage: ToolbarGroup.symbol(id))
+                            }
+                        }
+                    }
+                    .onMove { from, to in
+                        order[group]?.move(fromOffsets: from, toOffset: to)
+                        ToolbarConfig.setOrder(order[group] ?? [], for: group)
+                    }
+                }
+            }
+            Section {
+                HStack {
+                    Text("Drag to reorder. Hidden tools still work with their keyboard shortcuts.")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Reset to Default") {
+                        ToolbarConfig.reset()
+                        order = Self.loadOrder()
+                        hidden = ToolbarConfig.hidden
+                    }
+                }
+            }
+        }
+    }
+
+    private func visibleBinding(_ id: String) -> Binding<Bool> {
+        Binding {
+            !hidden.contains(id)
+        } set: { on in
+            if on { hidden.remove(id) } else { hidden.insert(id) }
+            ToolbarConfig.setHidden(hidden)
         }
     }
 }

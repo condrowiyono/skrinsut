@@ -3,7 +3,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// The editor. Everything lives in a unified title-bar toolbar:
-/// Copy Save | Pin | Drag-out OCR · tools … color/size/zoom read-outs; the canvas sits on a dark checkerboard.
+/// quick actions · tools … color/size/zoom read-outs (order and visibility from Settings ▸ Toolbar);
+/// the canvas sits on a dark checkerboard.
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate, CanvasViewDelegate {
     var onClose: ((EditorWindowController) -> Void)?
 
@@ -25,7 +26,15 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var collapsibleButtons: [ToolbarIconButton] = []
     private var actionsView: NSView?
     private var readoutsView: NSView?
-    private var readoutDividers: [NSView] = []
+    private var actionsRow: NSStackView?
+    private var toolsRow: NSStackView?
+    private var readoutsRow: NSStackView?
+    /// Configurable items by ToolbarGroup id (Settings ▸ Toolbar decides order and visibility).
+    private var actionViews: [String: NSView] = [:]
+    private var toolViews: [String: ToolbarIconButton] = [:]
+    private lazy var readoutViews: [String: ToolbarReadout] = ["color": colorReadout, "size": sizeReadout, "zoom": zoomReadout]
+    private let readoutDividers = [ToolbarDivider(height: 30), ToolbarDivider(height: 30)]
+    private var toolbarConfigObserver: NSObjectProtocol?
     private var styleGroup: NSView?
     private var styleButton: StyleColorButton!
     private let stylePopover = NSPopover()
@@ -39,9 +48,6 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var penColor: NSColor = .systemRed
     private var highlighterColor = NSColor(hex: UserDefaults.standard.string(forKey: highlighterColorKey) ?? "") ?? NSColor(hex: "#FFEA00")!
     private var lastTool: Tool = .arrow
-
-    private static let toolOrder: [Tool] = [.select, .arrow, .text, .ruler, .rectangle, .blur, .freehand, .magnifier,
-                                            .highlighter, .spotlight, .counter, .oval, .line, .crop]
 
     /// Editor windows open at this width (narrower only if the screen is); height follows the image.
     private static let defaultWidth: CGFloat = 1000
@@ -79,6 +85,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     deinit {
         if let magnificationObserver { NotificationCenter.default.removeObserver(magnificationObserver) }
+        if let toolbarConfigObserver { NotificationCenter.default.removeObserver(toolbarConfigObserver) }
     }
 
     // MARK: Toolbar
@@ -102,6 +109,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
         colorReadout.toolTip = "Press Tab (or click) to copy the color under the cursor"
         zoomReadout.onClick = { [weak self] in self?.menuZoomToFit(nil) }
         zoomReadout.toolTip = "Click to zoom to fit (⌘1) · ⌘0 for 100%"
+        toolbarConfigObserver = NotificationCenter.default.addObserver(forName: .toolbarConfigChanged, object: nil,
+                                                                       queue: .main) { [weak self] _ in self?.applyToolbarConfig() }
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -122,47 +131,42 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
             let pin = ToolbarIconButton(symbol: "pin", tip: "Pin to Screen (⌘P)", target: self, action: #selector(menuPin(_:)))
             let drag = DragOutButton { [weak self] in self?.finalImage() }
             let ocr = ToolbarIconButton(symbol: "text.viewfinder", tip: "Recognize Text (⇧⌘R)", target: self, action: #selector(recognizeText(_:)))
-            let row = NSStackView(views: [copy, ToolbarDivider(), save, ToolbarDivider(), pin, ToolbarDivider(), drag, ocr])
+            actionViews = ["copy": copy, "save": save, "pin": pin, "drag": drag, "ocr": ocr]
+            let row = NSStackView()
             row.spacing = 4
+            actionsRow = row
             let v = padded(row, leading: 0, trailing: 18)
             actionsView = v
             v.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             item.view = v
         case Item.tools:
-            var views: [NSView] = []
-            for tool in Self.toolOrder {
+            for tool in Tool.allCases {
                 let key = tool.shortcut.map { " (\(String($0).uppercased()))" } ?? ""
                 let b = ToolbarIconButton(symbol: tool.symbol, tip: tool.title + key, target: self, action: #selector(toolButtonClicked(_:)))
                 b.identifier = NSUserInterfaceItemIdentifier(tool.rawValue)
                 toolButtons[tool] = b
-                views.append(b)
+                toolViews[tool.rawValue] = b
             }
             addCaptureButton = ToolbarIconButton(symbol: "photo.badge.plus", tip: "Add Capture / Image", target: self,
                                                  action: #selector(showAddCaptureMenu(_:)))
-            views.append(addCaptureButton)
+            toolViews["addCapture"] = addCaptureButton
             backdropButton = ToolbarIconButton(symbol: "sparkles.rectangle.stack", tip: "Backdrop / Beautify", target: self,
                                                action: #selector(toggleBackdropPanel(_:)))
-            views.append(backdropButton)
-            collapsibleButtons = views.compactMap { $0 as? ToolbarIconButton }
+            toolViews["backdrop"] = backdropButton
             moreButton = ToolbarIconButton(symbol: "ellipsis", tip: "More tools", target: self, action: #selector(showMoreTools(_:)))
             moreButton.isHidden = true
-            views.append(moreButton)
             styleButton = StyleColorButton(target: self, action: #selector(showStylePopover(_:)))
             styleButton.color = canvas.color
-            let divider = ToolbarDivider()
-            views.append(divider)
-            views.append(styleButton)
-            styleGroup = divider
-            let row = NSStackView(views: views)
+            styleGroup = ToolbarDivider()
+            let row = NSStackView()
             row.spacing = 2
             row.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            toolsRow = row
             item.view = row
-            updateToolSelection()
         case Item.readouts:
-            let colorSep = ToolbarDivider(height: 30), sizeSep = ToolbarDivider(height: 30)
-            readoutDividers = [colorSep, sizeSep]
-            let row = NSStackView(views: [colorReadout, colorSep, sizeReadout, sizeSep, zoomReadout])
+            let row = NSStackView()
             row.spacing = 16
+            readoutsRow = row
             let v = padded(row, leading: 12, trailing: 6)
             readoutsView = v
             v.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -187,13 +191,40 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
         moreButton?.isSelected = toolButtons[canvas.tool]?.isHidden == true
     }
 
+    // MARK: Toolbar configuration
+
+    /// Lays out the quick actions and tools in the order and visibility chosen in Settings ▸ Toolbar.
+    private func applyToolbarConfig() {
+        if let actionsRow {
+            var views: [NSView] = []
+            for id in ToolbarConfig.visible(.actions) {
+                guard let v = actionViews[id] else { continue }
+                if !views.isEmpty { views.append(ToolbarDivider()) }
+                views.append(v)
+            }
+            setArranged(actionsRow, views)
+            actionsView?.isHidden = views.isEmpty
+        }
+        if let toolsRow {
+            collapsibleButtons = ToolbarConfig.visible(.tools).compactMap { toolViews[$0] }
+            toolViews.values.forEach { $0.isHidden = false } // layoutToolbar re-folds what doesn't fit
+            setArranged(toolsRow, collapsibleButtons + [moreButton as NSView?, styleGroup, styleButton].compactMap { $0 })
+        }
+        layoutToolbar()
+    }
+
+    private func setArranged(_ row: NSStackView, _ views: [NSView]) {
+        row.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        views.forEach(row.addArrangedSubview)
+    }
+
     // MARK: Responsive toolbar
 
     private static let slotWidth: CGFloat = 36   // button 34 + stack spacing 2
 
     /// Folds trailing tools into the "•••" menu when the window is too narrow to show them all.
     private func layoutToolbar(width proposed: CGFloat? = nil) {
-        guard let window, !collapsibleButtons.isEmpty else { return }
+        guard let window, moreButton != nil else { return }
         let width = proposed ?? window.frame.width
 
         // Traffic lights, toolbar item spacing/margins, the style divider + colour button,
@@ -204,21 +235,22 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
         // Shed readouts one at a time, keeping zoom longest and the colour swatch
         // shortest. AppKit's own overflow can only drop the whole readouts item, which
         // is what made the right-hand group vanish and reappear while resizing.
-        var budget = width - (actionsView?.fittingSize.width ?? 0) - reserved - Self.slotWidth * 6
-        var keep: [Bool] = []
-        for readout in [zoomReadout, sizeReadout, colorReadout] {
-            let need = readout.fittingSize.width + 17 // 16pt stack spacing + 1pt divider
-            let fits = budget >= need
-            if fits { budget -= need }
-            keep.append(fits)
+        let actionsWidth = actionsView.map { $0.isHidden ? 0 : $0.fittingSize.width } ?? 0
+        var budget = width - actionsWidth - reserved - Self.slotWidth * 6
+        let configured = ToolbarConfig.visible(.readouts)
+        var shown: Set<String> = []
+        for id in ["zoom", "size", "color"] where configured.contains(id) {
+            let need = readoutViews[id]!.fittingSize.width + 17 // 16pt stack spacing + 1pt divider
+            if budget >= need { budget -= need; shown.insert(id) }
         }
-        let (showZoom, showSize, showColor) = (keep[0], keep[1], keep[2])
-        zoomReadout.isHidden = !showZoom
-        sizeReadout.isHidden = !showSize
-        colorReadout.isHidden = !showColor
-        // A divider only earns its place when a readout survives on either side of it.
-        readoutDividers.first?.isHidden = !(showColor && showSize)
-        readoutDividers.last?.isHidden = !(showSize && showZoom)
+        // Rebuild the row so a divider only sits between two readouts that are actually shown.
+        var views: [NSView] = []
+        for (i, id) in configured.filter(shown.contains).enumerated() {
+            if i > 0 { views.append(readoutDividers[i - 1]) }
+            views.append(readoutViews[id]!)
+        }
+        if let readoutsRow, readoutsRow.arrangedSubviews != views { setArranged(readoutsRow, views) }
+        readoutsView?.isHidden = views.isEmpty
         readoutsView?.layoutSubtreeIfNeeded()
 
         let fixed = [actionsView, readoutsView]
@@ -332,7 +364,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
     }
 
     func present() {
-        layoutToolbar()
+        applyToolbarConfig()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         window?.makeFirstResponder(canvas)
