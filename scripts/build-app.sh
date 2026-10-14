@@ -9,9 +9,9 @@ if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode.app ]]; then
   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 
-swift build -c release --arch arm64 --arch x86_64 2>/dev/null || swift build -c release
-BIN="$(swift build -c release --show-bin-path 2>/dev/null)/Skrinsut"
-[[ -f "$BIN" ]] || BIN="$(find .build -path '*release*' -name Skrinsut -type f -perm -u+x | head -1)"
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCHS[@]}" || { ARCHS=(); swift build -c release; }
+BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/Skrinsut"
 
 APP=build/Skrinsut.app
 rm -rf "$APP"
