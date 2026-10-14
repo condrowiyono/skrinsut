@@ -14,8 +14,8 @@ enum MainMenu {
         app.addItem(withTitle: "Hide Skrinsut", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(item("Hide Others", #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]))
         app.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
-        app.addItem(.separator())
-        app.addItem(withTitle: "Quit Skrinsut", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        // No Quit here: Skrinsut lives in the menu bar, so ⌘Q must not kill it. Quitting is
+        // the menu-bar menu's Quit item only; ⌘W closes the key window and leaves it running.
 
         let file = submenu(main, "File")
         file.addItem(item("Copy Image", #selector(EditorWindowController.menuCopy(_:)), "c", [.command, .shift]))

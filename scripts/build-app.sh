@@ -9,9 +9,9 @@ if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode.app ]]; then
   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 
-swift build -c release --arch arm64 --arch x86_64 2>/dev/null || swift build -c release
-BIN="$(swift build -c release --show-bin-path 2>/dev/null)/Skrinsut"
-[[ -f "$BIN" ]] || BIN="$(find .build -path '*release*' -name Skrinsut -type f -perm -u+x | head -1)"
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCHS[@]}" || { ARCHS=(); swift build -c release; }
+BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/Skrinsut"
 
 APP=build/Skrinsut.app
 rm -rf "$APP"
@@ -53,7 +53,17 @@ cat > "$APP/Contents/Info.plist" <<PLIST
       <key>CFBundleTypeRole</key><string>Editor</string>
       <key>LSHandlerRank</key><string>Alternate</string>
       <key>LSItemContentTypes</key>
-      <array><string>public.png</string><string>public.jpeg</string><string>com.compuserve.gif</string></array>
+      <array><string>public.image</string></array>
+    </dict>
+  </array>
+  <key>NSServices</key>
+  <array>
+    <dict>
+      <key>NSMenuItem</key><dict><key>default</key><string>Edit in Skrinsut</string></dict>
+      <key>NSMessage</key><string>editImage</string>
+      <key>NSPortName</key><string>Skrinsut</string>
+      <key>NSSendFileTypes</key><array><string>public.image</string></array>
+      <key>NSRequiredContext</key><dict/>
     </dict>
   </array>
 </dict>

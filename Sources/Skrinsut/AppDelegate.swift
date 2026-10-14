@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         VideoSettings.registerDefaults()
         NSApp.setActivationPolicy(.accessory)
         NSApp.mainMenu = MainMenu.build()
+        NSApp.servicesProvider = self
+        NSUpdateDynamicServices()
         setupStatusItem()
         HotKeyManager.shared.onAction = { [weak self] in self?.perform($0) }
         HotKeyManager.shared.install()
@@ -99,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         add("Open From Clipboard", #selector(openFromClipboard))
         menu.addItem(.separator())
         add("Settings…", #selector(showPreferences), key: ",")
-        add("Quit Skrinsut", #selector(quit), key: "q")
+        add("Quit Skrinsut", #selector(quit)) // no ⌘Q hint: the shortcut is deliberately unbound
     }
 
     // MARK: Actions
@@ -321,6 +323,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for url in urls {
             if url.isFileURL { openImage(at: url) } else { handleDeepLink(url) }
         }
+    }
+
+    /// Finder ▸ right-click ▸ Edit in Skrinsut (NSServices in Info.plist).
+    @objc func editImage(_ pboard: NSPasteboard, userData: String?, error: AutoreleasingUnsafeMutablePointer<NSString?>) {
+        let urls = pboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        NSApp.activate(ignoringOtherApps: true)
+        urls.forEach(openImage(at:))
     }
 
     /// Supported routes, shown in Settings ▸ Deep Links.
