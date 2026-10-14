@@ -53,7 +53,17 @@ cat > "$APP/Contents/Info.plist" <<PLIST
       <key>CFBundleTypeRole</key><string>Editor</string>
       <key>LSHandlerRank</key><string>Alternate</string>
       <key>LSItemContentTypes</key>
-      <array><string>public.png</string><string>public.jpeg</string><string>com.compuserve.gif</string></array>
+      <array><string>public.image</string></array>
+    </dict>
+  </array>
+  <key>NSServices</key>
+  <array>
+    <dict>
+      <key>NSMenuItem</key><dict><key>default</key><string>Edit in Skrinsut</string></dict>
+      <key>NSMessage</key><string>editImage</string>
+      <key>NSPortName</key><string>Skrinsut</string>
+      <key>NSSendFileTypes</key><array><string>public.image</string></array>
+      <key>NSRequiredContext</key><dict/>
     </dict>
   </array>
 </dict>
