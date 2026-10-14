@@ -21,6 +21,7 @@ struct WindowInfo {
     let windowID: CGWindowID
     let frame: CGRect
     let ownerName: String
+    let title: String
 }
 
 enum CaptureError: LocalizedError {
@@ -145,7 +146,8 @@ enum Capturer {
             else { return nil }
             // CoreGraphics global space has a top-left origin on the primary display.
             let frame = CGRect(x: cg.minX, y: primaryHeight - cg.maxY, width: cg.width, height: cg.height)
-            return WindowInfo(windowID: id, frame: frame, ownerName: info[kCGWindowOwnerName as String] as? String ?? "")
+            return WindowInfo(windowID: id, frame: frame, ownerName: info[kCGWindowOwnerName as String] as? String ?? "",
+                              title: info[kCGWindowName as String] as? String ?? "")
         }
     }
 }

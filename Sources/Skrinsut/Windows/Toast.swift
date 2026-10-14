@@ -12,6 +12,11 @@ enum Toast {
         present(message, detail: detail, persistent: false)
     }
 
+    /// Shown even when notifications are off: for things the user must always see (AI captures).
+    static func notice(_ message: String, detail: String? = nil) {
+        present(message, detail: detail, persistent: false)
+    }
+
     /// Sticky toast for long tasks (encoding, installing); stays until the next `show`/`progress` or `dismiss`.
     static func progress(_ message: String) {
         if let progressTitle, panel != nil {
