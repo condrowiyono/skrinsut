@@ -339,9 +339,17 @@ private final class SelectorView: NSView {
         (text as NSString).draw(at: CGPoint(x: rect.minX + 12, y: rect.minY + (26 - size.height) / 2), withAttributes: attrs)
     }
 
+    // monospacedSystemFont can return nil (seen after long uptime + sleep/wake), and Swift
+    // doesn't check it, so CoreText aborts on a nil font. Go through the failable initializer instead.
+    private static let badgeFont: NSFont =
+        NSFont.systemFont(ofSize: 11, weight: .medium).fontDescriptor.withDesign(.monospaced)
+            .flatMap { NSFont(descriptor: $0, size: 11) }
+        ?? NSFont.userFixedPitchFont(ofSize: 11)
+        ?? NSFont.systemFont(ofSize: 11)
+
     private func drawBadge(_ text: String, at p: CGPoint, width: CGFloat) {
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium),
+            .font: Self.badgeFont,
             .foregroundColor: NSColor.white,
         ]
         let size = (text as NSString).size(withAttributes: attrs)
