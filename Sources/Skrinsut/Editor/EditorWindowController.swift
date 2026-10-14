@@ -25,6 +25,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var collapsibleButtons: [ToolbarIconButton] = []
     private var actionsView: NSView?
     private var readoutsView: NSView?
+    private var readoutDividers: [NSView] = []
     private var styleGroup: NSView?
     private var styleButton: StyleColorButton!
     private let stylePopover = NSPopover()
@@ -125,6 +126,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
             row.spacing = 4
             let v = padded(row, leading: 0, trailing: 18)
             actionsView = v
+            v.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             item.view = v
         case Item.tools:
             var views: [NSView] = []
@@ -153,13 +155,17 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
             styleGroup = divider
             let row = NSStackView(views: views)
             row.spacing = 2
+            row.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             item.view = row
             updateToolSelection()
         case Item.readouts:
-            let row = NSStackView(views: [colorReadout, ToolbarDivider(height: 30), sizeReadout, ToolbarDivider(height: 30), zoomReadout])
+            let colorSep = ToolbarDivider(height: 30), sizeSep = ToolbarDivider(height: 30)
+            readoutDividers = [colorSep, sizeSep]
+            let row = NSStackView(views: [colorReadout, colorSep, sizeReadout, sizeSep, zoomReadout])
             row.spacing = 16
             let v = padded(row, leading: 12, trailing: 6)
             readoutsView = v
+            v.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             item.view = v
         default:
             return nil
@@ -186,16 +192,39 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
     private static let slotWidth: CGFloat = 36   // button 34 + stack spacing 2
 
     /// Folds trailing tools into the "•••" menu when the window is too narrow to show them all.
-    private func layoutToolbar() {
+    private func layoutToolbar(width proposed: CGFloat? = nil) {
         guard let window, !collapsibleButtons.isEmpty else { return }
-        let width = window.frame.width
+        let width = proposed ?? window.frame.width
+
+        // Traffic lights, toolbar item spacing/margins, the style divider + colour button,
+        // and 28pt of slack measured across a width sweep: without it the tool slots crowd
+        // the readouts to within a few points of the edge and AppKit overflows the item.
+        let reserved: CGFloat = 96 + 4 + 40 + 28
+
+        // Shed readouts one at a time, keeping zoom longest and the colour swatch
+        // shortest. AppKit's own overflow can only drop the whole readouts item, which
+        // is what made the right-hand group vanish and reappear while resizing.
+        var budget = width - (actionsView?.fittingSize.width ?? 0) - reserved - Self.slotWidth * 6
+        var keep: [Bool] = []
+        for readout in [zoomReadout, sizeReadout, colorReadout] {
+            let need = readout.fittingSize.width + 17 // 16pt stack spacing + 1pt divider
+            let fits = budget >= need
+            if fits { budget -= need }
+            keep.append(fits)
+        }
+        let (showZoom, showSize, showColor) = (keep[0], keep[1], keep[2])
+        zoomReadout.isHidden = !showZoom
+        sizeReadout.isHidden = !showSize
+        colorReadout.isHidden = !showColor
+        // A divider only earns its place when a readout survives on either side of it.
+        readoutDividers.first?.isHidden = !(showColor && showSize)
+        readoutDividers.last?.isHidden = !(showSize && showZoom)
+        readoutsView?.layoutSubtreeIfNeeded()
 
         let fixed = [actionsView, readoutsView]
             .compactMap { $0 }
             .filter { !$0.isHidden }
             .reduce(CGFloat(0)) { $0 + $1.fittingSize.width }
-        // Traffic lights, toolbar item spacing/margins, and the style divider + color button.
-        let reserved: CGFloat = 96 + 4 + 40
         let slots = Int(((width - fixed - reserved) / Self.slotWidth).rounded(.down))
 
         let total = collapsibleButtons.count
@@ -274,6 +303,11 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
         middle.orientation = .horizontal
         middle.spacing = 0
         middle.alignment = .height
+        // NSStackView refuses to clip its arranged views by default, and an NSScrollView
+        // reports its frame as its fitting size, so the window's minimum ratcheted up to
+        // its current size. Let the stack clip so the window can always shrink.
+        middle.setClippingResistancePriority(.defaultLow, for: .horizontal)
+        middle.setClippingResistancePriority(.defaultLow, for: .vertical)
         middle.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(middle)
         NSLayoutConstraint.activate([
@@ -598,6 +632,11 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
     }
 
     // MARK: NSWindowDelegate
+
+    func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+        layoutToolbar(width: frameSize.width)
+        return frameSize
+    }
 
     func windowDidResize(_ notification: Notification) {
         backdropView.refreshDisplay()
