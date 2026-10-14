@@ -15,6 +15,7 @@ enum SettingKey {
     static let alwaysOnTop = "setting-alwaysOnTop"
     static let ocrRemoveBreaks = "setting-ocrRemoveBreaks"
     static let allowDeeplinks = "setting-allowDeeplinks"
+    static let allowMcp = "setting-allowMcp"                    // Bool: AI assistants may capture via MCP
     static let thumbnailClosing = "setting-thumbnailClosing"     // ThumbnailClosing raw value
     static let notificationType = "setting-notificationType"     // "custom" | "none"
     static let captureCursor = "setting-captureCursor"
@@ -79,6 +80,7 @@ enum Settings {
             SettingKey.alwaysOnTop: false,
             SettingKey.ocrRemoveBreaks: false,
             SettingKey.allowDeeplinks: false,
+            SettingKey.allowMcp: false,
             SettingKey.thumbnailClosing: ThumbnailClosing.automatic.rawValue,
             SettingKey.notificationType: "custom",
             SettingKey.captureCursor: false,
@@ -105,6 +107,7 @@ enum Settings {
     static var alwaysOnTop: Bool { d.bool(forKey: SettingKey.alwaysOnTop) }
     static var ocrRemoveBreaks: Bool { d.bool(forKey: SettingKey.ocrRemoveBreaks) }
     static var allowDeeplinks: Bool { d.bool(forKey: SettingKey.allowDeeplinks) }
+    static var allowMcp: Bool { d.bool(forKey: SettingKey.allowMcp) }
     static var thumbnailClosing: ThumbnailClosing {
         ThumbnailClosing(rawValue: d.string(forKey: SettingKey.thumbnailClosing) ?? "") ?? .automatic
     }

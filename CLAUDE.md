@@ -21,3 +21,4 @@ macOS screenshot and screen-recording app (Swift/AppKit + SwiftUI settings), bui
 - `Sources/Skrinsut/Recording`: recorder (temp .mov), ffmpeg encoding, video settings, installer.
 - `Sources/Skrinsut/Prefs`: settings window (General, Image, Video, Shortcuts, About, Help).
 - `Sources/Skrinsut/Windows`: pin, thumbnail preview, toast.
+- `Sources/Skrinsut/MCP`: `Skrinsut --mcp` stdio MCP server, forwarding tool calls over a Unix socket to the running app (which owns the Screen Recording permission). Off unless Settings ▸ Deep Links ▸ Allow AI assistants is on.

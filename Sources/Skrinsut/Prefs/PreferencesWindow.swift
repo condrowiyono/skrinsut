@@ -497,6 +497,8 @@ private struct FFmpegSection: View {
 
 private struct DeepLinksPane: View {
     @AppStorage(SettingKey.allowDeeplinks) private var allowDeeplinks = false
+    @AppStorage(SettingKey.allowMcp) private var allowMcp = false
+    private var mcpCommand: String { "claude mcp add skrinsut -- '\(Bundle.main.executablePath ?? "")' --mcp" }
 
     var body: some View {
         Form {
@@ -522,6 +524,31 @@ private struct DeepLinksPane: View {
                 }
             } footer: {
                 Text("Lets other apps, scripts and launchers (Shortcuts, Raycast, Alfred, Terminal `open skrinsut://grab/area`) trigger captures. Off by default, so websites and apps can't take screenshots without you turning this on.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Allow AI assistants (MCP)", isOn: $allowMcp)
+                if allowMcp {
+                    LabeledContent("Claude Code") {
+                        HStack(spacing: 6) {
+                            Text(mcpCommand)
+                                .font(.callout.monospaced())
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .lineLimit(2)
+                            Button {
+                                Exporter.copyText(mcpCommand)
+                                Toast.show("Copied command", detail: "Run it in Terminal to add Skrinsut to Claude Code")
+                            } label: { Image(systemName: "doc.on.doc") }
+                            .buttonStyle(.borderless)
+                            .help("Copy command")
+                        }
+                    }
+                }
+            } header: {
+                Text("AI Assistants")
+            } footer: {
+                Text("Lets AI assistants that speak MCP list windows, take screenshots and read text on screen. Area captures always wait for you to select. Each capture shows a notice. Off by default.")
                     .foregroundStyle(.secondary)
             }
         }

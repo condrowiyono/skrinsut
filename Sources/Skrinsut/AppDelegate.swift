@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         HotKeyManager.shared.onAction = { [weak self] in self?.perform($0) }
         HotKeyManager.shared.install()
         RecordingController.shared.onStateChange = { [weak self] in self?.updateStatusItem() }
+        McpBridge.shared.start()
         if !CGPreflightScreenCaptureAccess() { CGRequestScreenCaptureAccess() }
     }
 
