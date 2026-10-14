@@ -99,7 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         add("Open From Clipboard", #selector(openFromClipboard))
         menu.addItem(.separator())
         add("Settings…", #selector(showPreferences), key: ",")
-        add("Quit Skrinsut", #selector(quit), key: "q")
+        add("Quit Skrinsut", #selector(quit)) // no ⌘Q hint: the shortcut is deliberately unbound
     }
 
     // MARK: Actions
