@@ -61,7 +61,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.title = "Skrinsut"
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
-        window.minSize = CGSize(width: 780, height: 420)
+        window.minSize = CGSize(width: 480, height: 360) // the toolbar collapses into "•••" below this
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
         if Settings.alwaysOnTop { window.level = .floating }
